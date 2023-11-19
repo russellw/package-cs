@@ -48,6 +48,7 @@ internal class Program {
 			}
 		}
 
+		// Build
 		var process = new Process();
 		process.StartInfo.FileName = "dotnet";
 		process.StartInfo.Arguments = "publish /p:Configuration=Release /p:Platform=\"Any CPU\"";
@@ -60,6 +61,7 @@ internal class Program {
 		var targetFrameworkRegex = new Regex("<TargetFramework>(.*)</TargetFramework>",
 											 RegexOptions.Compiled | RegexOptions.CultureInvariant | RegexOptions.NonBacktracking);
 
+		// Check csproj for parameters
 		var version = "1.0";
 		foreach (var s in File.ReadLines(csproj)) {
 			var match = targetFrameworkRegex.Match(s);
@@ -67,6 +69,7 @@ internal class Program {
 				targetFramework = match.Groups[1].Value;
 		}
 
+		// Zip
 		var projectVersion = $"{Path.GetFileNameWithoutExtension(csproj)}-{version}";
 		var zipName = $"bin/{projectVersion}.zip";
 		using var zip = File.Create(zipName);
