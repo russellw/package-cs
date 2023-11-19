@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using System.IO.Compression;
 using System.Text.RegularExpressions;
 
 internal class Program {
@@ -56,16 +57,25 @@ internal class Program {
 			Environment.Exit(process.ExitCode);
 
 		var targetFramework = "net7.0";
-		var targetFrameworkRegex = new Regex(@"<TargetFramework>(.*)</TargetFramework>",
+		var targetFrameworkRegex = new Regex("<TargetFramework>(.*)</TargetFramework>",
 											 RegexOptions.Compiled | RegexOptions.CultureInvariant | RegexOptions.NonBacktracking);
 
 		var version = "1.0";
 		foreach (var s in File.ReadLines(csproj)) {
 			var match = targetFrameworkRegex.Match(s);
 			if (match.Success) {
-				targetFramework = match.Captures[0].Value;
+				targetFramework = match.Captures[1].Value;
 				Console.WriteLine(match);
 			}
+		}
+
+		using var zip = new FileStream($"{Path.GetFileNameWithoutExtension(csproj)}-{version}.zip", FileMode.CreateNew);
+		using var archive = new ZipArchive(zip, ZipArchiveMode.Update);
+		foreach (var path in Directory.GetFileSystemEntries($"bin/Release/{targetFramework}/publish")) {
+			var entry = archive.CreateEntry(Path.GetFileName(path));
+			using var reader = new StreamReader(path);
+			using var writer = new StreamWriter(entry.Open());
+			writer.Write(reader.ReadToEnd());
 		}
 	}
 
