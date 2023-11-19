@@ -103,10 +103,10 @@ internal class Program {
 		using var zip = File.Create(zipName);
 		using var archive = new ZipArchive(zip, ZipArchiveMode.Update);
 		foreach (var path in Directory.GetFileSystemEntries(publishPath)) {
+			using var reader = File.OpenRead(path);
 			var entry = archive.CreateEntry($"{projectVersion}/{Path.GetFileName(path)}");
-			using var reader = new StreamReader(path);
-			using var writer = new StreamWriter(entry.Open());
-			writer.Write(reader.ReadToEnd());
+			using var writer = entry.Open();
+			reader.CopyTo(writer);
 		}
 		Console.WriteLine(zipName);
 	}
