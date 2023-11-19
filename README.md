@@ -1,7 +1,4 @@
-# package-cs
-Package compiled C# program for distribution
-
-A common way to distribute a program (as opposed to a library) is as a compressed archive of binary files.
+A common way to distribute a program (as opposed to a library) is a compressed archive of binary files.
 
 In C#, `dotnet publish` can produce output that looks like this:
 
@@ -18,7 +15,7 @@ In C#, `dotnet publish` can produce output that looks like this:
                5 File(s)        176,591 bytes
 ```
 
-The above is the simplest case; in the general case, many programs will use various libraries that will also be included as DLLs in the `publish` directory.
+The above is the simplest case; in general, many programs use various libraries that will also be included as DLLs in the `publish` directory.
 
 The `.exe` is the program that is directly run by the user, but it needs to be accompanied by the other files.
 
