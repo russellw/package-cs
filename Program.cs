@@ -104,7 +104,7 @@ internal class Program {
 		using var archive = new ZipArchive(zip, ZipArchiveMode.Update);
 		foreach (var path in Directory.GetFileSystemEntries(publishPath)) {
 			using var reader = File.OpenRead(path);
-			var entry = archive.CreateEntry($"{projectVersion}/{Path.GetFileName(path)}");
+			var entry = archive.CreateEntry($"{projectVersion}/{Path.GetFileName(path)}", CompressionLevel.SmallestSize);
 			using var writer = entry.Open();
 			reader.CopyTo(writer);
 		}
