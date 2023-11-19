@@ -69,7 +69,8 @@ internal class Program {
 			}
 		}
 
-		using var zip = new FileStream($"{Path.GetFileNameWithoutExtension(csproj)}-{version}.zip", FileMode.CreateNew);
+		var zipName = $"bin/{Path.GetFileNameWithoutExtension(csproj)}-{version}.zip";
+		using var zip = new FileStream(zipName, FileMode.CreateNew);
 		using var archive = new ZipArchive(zip, ZipArchiveMode.Update);
 		foreach (var path in Directory.GetFileSystemEntries($"bin/Release/{targetFramework}/publish")) {
 			var entry = archive.CreateEntry(Path.GetFileName(path));
@@ -77,6 +78,7 @@ internal class Program {
 			using var writer = new StreamWriter(entry.Open());
 			writer.Write(reader.ReadToEnd());
 		}
+		Console.WriteLine(zipName);
 	}
 
 	static void Help() {
