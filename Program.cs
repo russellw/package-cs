@@ -1,3 +1,6 @@
+using System.Diagnostics;
+using System.Text.RegularExpressions;
+
 internal class Program {
 	static void Main(string[] args) {
 		var options = true;
@@ -41,6 +44,27 @@ internal class Program {
 			if (csproj == null) {
 				Console.WriteLine("csproj not specified, and not found in current directory");
 				Environment.Exit(1);
+			}
+		}
+
+		var process = new Process();
+		process.StartInfo.FileName = "dotnet";
+		process.StartInfo.Arguments = "publish /p:Configuration=Release /p:Platform=\"Any CPU\"";
+		process.Start();
+		process.WaitForExit();
+		if (process.ExitCode != 0)
+			Environment.Exit(process.ExitCode);
+
+		var targetFramework = "net7.0";
+		var targetFrameworkRegex = new Regex(@"<TargetFramework>(.*)</TargetFramework>",
+											 RegexOptions.Compiled | RegexOptions.CultureInvariant | RegexOptions.NonBacktracking);
+
+		var version = "1.0";
+		foreach (var s in File.ReadLines(csproj)) {
+			var match = targetFrameworkRegex.Match(s);
+			if (match.Success) {
+				targetFramework = match.Captures[0].Value;
+				Console.WriteLine(match);
 			}
 		}
 	}
