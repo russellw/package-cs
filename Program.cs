@@ -63,17 +63,16 @@ internal class Program {
 		var version = "1.0";
 		foreach (var s in File.ReadLines(csproj)) {
 			var match = targetFrameworkRegex.Match(s);
-			if (match.Success) {
-				targetFramework = match.Captures[1].Value;
-				Console.WriteLine(match);
-			}
+			if (match.Success)
+				targetFramework = match.Groups[1].Value;
 		}
 
-		var zipName = $"bin/{Path.GetFileNameWithoutExtension(csproj)}-{version}.zip";
-		using var zip = new FileStream(zipName, FileMode.CreateNew);
+		var projectVersion = $"{Path.GetFileNameWithoutExtension(csproj)}-{version}";
+		var zipName = $"bin/{projectVersion}.zip";
+		using var zip = File.Create(zipName);
 		using var archive = new ZipArchive(zip, ZipArchiveMode.Update);
 		foreach (var path in Directory.GetFileSystemEntries($"bin/Release/{targetFramework}/publish")) {
-			var entry = archive.CreateEntry(Path.GetFileName(path));
+			var entry = archive.CreateEntry($"{projectVersion}/{Path.GetFileName(path)}");
 			using var reader = new StreamReader(path);
 			using var writer = new StreamWriter(entry.Open());
 			writer.Write(reader.ReadToEnd());
