@@ -34,6 +34,10 @@ internal class Program {
 					}
 				}
 			}
+			if (csproj != null) {
+				Console.WriteLine(s + ": csproj already specified");
+				Environment.Exit(1);
+			}
 			csproj = s;
 		}
 		if (csproj == null) {
