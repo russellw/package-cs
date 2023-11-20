@@ -3,9 +3,13 @@ using System.IO.Compression;
 using System.Text.RegularExpressions;
 
 internal class Program {
+	static bool batchFile;
+	static string projectName = null!;
+	static string projectVersion = null!;
+	static string publishPath = null!;
+
 	static void Main(string[] args) {
 		var options = true;
-		var batchFile = false;
 		string? csproj = null;
 		foreach (var arg in args) {
 			var s = arg;
@@ -82,11 +86,23 @@ internal class Program {
 			if (match.Success)
 				version = match.Groups[1].Value;
 		}
-		var projectName = Path.GetFileNameWithoutExtension(csproj);
-		var projectVersion = $"{projectName}-{version}";
-		var publishPath = $"bin/Release/{targetFramework}/publish";
+		projectName = Path.GetFileNameWithoutExtension(csproj);
+		projectVersion = $"{projectName}-{version}";
+		publishPath = $"bin/Release/{targetFramework}/publish";
 
-		// Batch file
+		// Make archives
+		Zip();
+	}
+
+	static void Help() {
+		Console.WriteLine("Usage: package-cs [options] [file.csproj]");
+		Console.WriteLine();
+		Console.WriteLine("-h  Show help");
+		Console.WriteLine("-V  Show version");
+		Console.WriteLine("-b  Add batch file");
+	}
+
+	static void Zip() {
 		if (batchFile) {
 			using var writer = new StreamWriter($"{publishPath}/{projectName}.bat");
 			writer.NewLine = "\n";
@@ -98,7 +114,6 @@ internal class Program {
 			writer.WriteLine($"C:\\{projectVersion}\\{projectName}.exe %*");
 		}
 
-		// Zip
 		var zipName = $"bin/{projectVersion}.zip";
 		using var zip = File.Create(zipName);
 		using var archive = new ZipArchive(zip, ZipArchiveMode.Update);
@@ -108,14 +123,7 @@ internal class Program {
 			using var writer = entry.Open();
 			reader.CopyTo(writer);
 		}
-		Console.WriteLine(zipName);
-	}
 
-	static void Help() {
-		Console.WriteLine("Usage: package-cs [options] [file.csproj]");
-		Console.WriteLine();
-		Console.WriteLine("-h  Show help");
-		Console.WriteLine("-V  Show version");
-		Console.WriteLine("-b  Add batch file");
+		Console.WriteLine(zipName);
 	}
 }
