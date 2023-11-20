@@ -1,9 +1,10 @@
+using ICSharpCode.SharpZipLib.GZip;
+using ICSharpCode.SharpZipLib.Tar;
 using System.Diagnostics;
 using System.IO.Compression;
 using System.Text.RegularExpressions;
 
 internal class Program {
-	static bool batchFile;
 	static string projectName = null!;
 	static string projectVersion = null!;
 	static string publishPath = null!;
@@ -22,9 +23,6 @@ internal class Program {
 					while (s.StartsWith('-'))
 						s = s[1..];
 					switch (s) {
-					case "b":
-						batchFile = true;
-						break;
 					case "?":
 					case "h":
 					case "help":
@@ -91,6 +89,7 @@ internal class Program {
 		publishPath = $"bin/Release/{targetFramework}/publish";
 
 		// Make archives
+		Tar();
 		Zip();
 	}
 
@@ -99,31 +98,52 @@ internal class Program {
 		Console.WriteLine();
 		Console.WriteLine("-h  Show help");
 		Console.WriteLine("-V  Show version");
-		Console.WriteLine("-b  Add batch file");
+	}
+
+	static void Tar() {
+		var archiveName = $"bin/{projectVersion}.tar.gz";
+		using var archiveStream = File.Create(archiveName);
+		using var gzipStream = new GZipOutputStream(archiveStream);
+		using var archive = TarArchive.CreateOutputTarArchive(gzipStream);
+		archive.RootPath = projectVersion;
+
+		// Add all the published files
+		foreach (var path in Directory.GetFileSystemEntries(publishPath)) {
+			var entry = TarEntry.CreateEntryFromFile(path);
+			entry.Name = Path.GetFileName(path);
+			archive.WriteEntry(entry, false);
+		}
+
+		// Report success
+		Console.WriteLine(archiveName);
 	}
 
 	static void Zip() {
-		var zipName = $"bin/{projectVersion}.zip";
-		using var zip = File.Create(zipName);
-		using var archive = new ZipArchive(zip, ZipArchiveMode.Update);
+		var archiveName = $"bin/{projectVersion}.zip";
+		using var archiveStream = File.Create(archiveName);
+		using var archive = new ZipArchive(archiveStream, ZipArchiveMode.Create);
+
+		// Add all the published files
 		foreach (var path in Directory.GetFileSystemEntries(publishPath)) {
 			using var inputStream = File.OpenRead(path);
 			var entry = archive.CreateEntry($"{projectVersion}/{Path.GetFileName(path)}", CompressionLevel.SmallestSize);
 			using var outputStream = entry.Open();
 			inputStream.CopyTo(outputStream);
 		}
-		if (batchFile) {
-			var entry = archive.CreateEntry($"{projectVersion}/{projectName}.bat", CompressionLevel.SmallestSize);
-			using var outputStream = entry.Open();
-			using var writer = new StreamWriter(outputStream);
-			writer.NewLine = "\n";
-			writer.WriteLine("@echo off");
-			writer.WriteLine("rem This file can provide a convenient command to run " + projectName);
-			writer.WriteLine("rem To use it as such,");
-			writer.WriteLine("rem change it to point to where you put your copy of " + projectName);
-			writer.WriteLine("rem and put it in a directory in your PATH");
-			writer.WriteLine($"C:\\{projectVersion}\\{projectName}.exe %*");
-		}
-		Console.WriteLine(zipName);
+
+		// Write a script
+		var scriptEntry = archive.CreateEntry($"{projectVersion}/{projectName}.bat", CompressionLevel.SmallestSize);
+		using var scriptStream = scriptEntry.Open();
+		using var writer = new StreamWriter(scriptStream);
+		writer.NewLine = "\n";
+		writer.WriteLine("@echo off");
+		writer.WriteLine("rem This file can provide a convenient command to run " + projectName);
+		writer.WriteLine("rem To use it as such,");
+		writer.WriteLine("rem change it to point to where you put your copy of " + projectName);
+		writer.WriteLine("rem and put it in a directory in your PATH");
+		writer.WriteLine($"C:\\{projectVersion}\\{projectName}.exe %*");
+
+		// Report success
+		Console.WriteLine(archiveName);
 	}
 }
