@@ -103,8 +103,19 @@ internal class Program {
 	}
 
 	static void Zip() {
+		var zipName = $"bin/{projectVersion}.zip";
+		using var zip = File.Create(zipName);
+		using var archive = new ZipArchive(zip, ZipArchiveMode.Update);
+		foreach (var path in Directory.GetFileSystemEntries(publishPath)) {
+			using var inputStream = File.OpenRead(path);
+			var entry = archive.CreateEntry($"{projectVersion}/{Path.GetFileName(path)}", CompressionLevel.SmallestSize);
+			using var outputStream = entry.Open();
+			inputStream.CopyTo(outputStream);
+		}
 		if (batchFile) {
-			using var writer = new StreamWriter($"{publishPath}/{projectName}.bat");
+			var entry = archive.CreateEntry($"{projectVersion}/{projectName}.bat", CompressionLevel.SmallestSize);
+			using var outputStream = entry.Open();
+			using var writer = new StreamWriter(outputStream);
 			writer.NewLine = "\n";
 			writer.WriteLine("@echo off");
 			writer.WriteLine("rem This file can provide a convenient command to run " + projectName);
@@ -113,17 +124,6 @@ internal class Program {
 			writer.WriteLine("rem and put it in a directory in your PATH");
 			writer.WriteLine($"C:\\{projectVersion}\\{projectName}.exe %*");
 		}
-
-		var zipName = $"bin/{projectVersion}.zip";
-		using var zip = File.Create(zipName);
-		using var archive = new ZipArchive(zip, ZipArchiveMode.Update);
-		foreach (var path in Directory.GetFileSystemEntries(publishPath)) {
-			using var reader = File.OpenRead(path);
-			var entry = archive.CreateEntry($"{projectVersion}/{Path.GetFileName(path)}", CompressionLevel.SmallestSize);
-			using var writer = entry.Open();
-			reader.CopyTo(writer);
-		}
-
 		Console.WriteLine(zipName);
 	}
 }
