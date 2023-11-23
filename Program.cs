@@ -89,7 +89,9 @@ internal class Program {
 		publishPath = $"bin/Release/{targetFramework}/publish";
 
 		// Make archives
+		WriteShellScript();
 		Tar();
+		File.Delete($"{publishPath}/{projectName}");
 
 		WriteBatchFile();
 		Zip();
@@ -104,6 +106,14 @@ internal class Program {
 	}
 
 	static void WriteShellScript() {
+		using var writer = new StreamWriter($"{publishPath}/{projectName}");
+		writer.NewLine = "\n";
+		writer.WriteLine("#!/bin/sh");
+		writer.WriteLine("# This file can provide a convenient command to run " + projectName);
+		writer.WriteLine("# To use it as such,");
+		writer.WriteLine("# change it to point to where you put your copy of " + projectName);
+		writer.WriteLine("# and put it in a directory in your PATH");
+		writer.WriteLine($"/usr/local/bin/{projectVersion}/{projectName}.exe \"$@\"");
 	}
 
 	static void WriteBatchFile() {
@@ -126,13 +136,12 @@ internal class Program {
 			var entry = TarEntry.CreateEntryFromFile(path);
 			entry.Name = $"{projectVersion}/{Path.GetFileName(path)}";
 			switch (Path.GetExtension(path)) {
-			case ".pdb":
-			case ".dll":
-			case ".json":
-				entry.TarHeader.Mode = Convert.ToInt32("644", 8);
+			case ".exe":
+			case "":
+				entry.TarHeader.Mode = Convert.ToInt32("755", 8);
 				break;
 			default:
-				entry.TarHeader.Mode = Convert.ToInt32("755", 8);
+				entry.TarHeader.Mode = Convert.ToInt32("644", 8);
 				break;
 			}
 			archive.WriteEntry(entry, false);
