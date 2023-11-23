@@ -105,13 +105,12 @@ internal class Program {
 		using var archiveStream = File.Create(archiveName);
 		using var gzipStream = new GZipOutputStream(archiveStream);
 		using var archive = TarArchive.CreateOutputTarArchive(gzipStream);
-		archive.RootPath = projectVersion;
 
 		// Add all the published files
 		foreach (var path in Directory.GetFileSystemEntries(publishPath)) {
 			var entry = TarEntry.CreateEntryFromFile(path);
-			entry.Name = Path.GetFileName(path);
-			archive.WriteEntry(entry, false);
+			entry.Name = $"{projectVersion}/{Path.GetFileName(path)}";
+			archive.WriteEntry(entry, true);
 		}
 
 		// Report success
