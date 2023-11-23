@@ -90,7 +90,10 @@ internal class Program {
 
 		// Make archives
 		Tar();
+
+		WriteBatchFile();
 		Zip();
+		File.Delete($"{publishPath}/{projectName}.bat");
 	}
 
 	static void Help() {
@@ -100,40 +103,11 @@ internal class Program {
 		Console.WriteLine("-V  Show version");
 	}
 
-	static void Tar() {
-		var archiveName = $"bin/{projectVersion}.tar.gz";
-		using var archiveStream = File.Create(archiveName);
-		using var gzipStream = new GZipOutputStream(archiveStream);
-		using var archive = TarArchive.CreateOutputTarArchive(gzipStream);
-
-		// Add all the published files
-		foreach (var path in Directory.GetFileSystemEntries(publishPath)) {
-			var entry = TarEntry.CreateEntryFromFile(path);
-			entry.Name = $"{projectVersion}/{Path.GetFileName(path)}";
-			archive.WriteEntry(entry, true);
-		}
-
-		// Report success
-		Console.WriteLine(archiveName);
+	static void WriteShellScript() {
 	}
 
-	static void Zip() {
-		var archiveName = $"bin/{projectVersion}.zip";
-		using var archiveStream = File.Create(archiveName);
-		using var archive = new ZipArchive(archiveStream, ZipArchiveMode.Create);
-
-		// Add all the published files
-		foreach (var path in Directory.GetFileSystemEntries(publishPath)) {
-			using var inputStream = File.OpenRead(path);
-			var entry = archive.CreateEntry($"{projectVersion}/{Path.GetFileName(path)}", CompressionLevel.SmallestSize);
-			using var outputStream = entry.Open();
-			inputStream.CopyTo(outputStream);
-		}
-
-		// Write a script
-		var scriptEntry = archive.CreateEntry($"{projectVersion}/{projectName}.bat", CompressionLevel.SmallestSize);
-		using var scriptStream = scriptEntry.Open();
-		using var writer = new StreamWriter(scriptStream);
+	static void WriteBatchFile() {
+		using var writer = new StreamWriter($"{publishPath}/{projectName}.bat");
 		writer.NewLine = "\n";
 		writer.WriteLine("@echo off");
 		writer.WriteLine("rem This file can provide a convenient command to run " + projectName);
@@ -141,8 +115,41 @@ internal class Program {
 		writer.WriteLine("rem change it to point to where you put your copy of " + projectName);
 		writer.WriteLine("rem and put it in a directory in your PATH");
 		writer.WriteLine($"C:\\{projectVersion}\\{projectName}.exe %*");
+	}
 
-		// Report success
+	static void Tar() {
+		var archiveName = $"bin/{projectVersion}.tar.gz";
+		using var archiveStream = File.Create(archiveName);
+		using var gzipStream = new GZipOutputStream(archiveStream);
+		using var archive = TarArchive.CreateOutputTarArchive(gzipStream);
+		foreach (var path in Directory.GetFileSystemEntries(publishPath)) {
+			var entry = TarEntry.CreateEntryFromFile(path);
+			entry.Name = $"{projectVersion}/{Path.GetFileName(path)}";
+			switch (Path.GetExtension(path)) {
+			case ".pdb":
+			case ".dll":
+			case ".json":
+				entry.TarHeader.Mode = Convert.ToInt32("644", 8);
+				break;
+			default:
+				entry.TarHeader.Mode = Convert.ToInt32("755", 8);
+				break;
+			}
+			archive.WriteEntry(entry, false);
+		}
+		Console.WriteLine(archiveName);
+	}
+
+	static void Zip() {
+		var archiveName = $"bin/{projectVersion}.zip";
+		using var archiveStream = File.Create(archiveName);
+		using var archive = new ZipArchive(archiveStream, ZipArchiveMode.Create);
+		foreach (var path in Directory.GetFileSystemEntries(publishPath)) {
+			using var inputStream = File.OpenRead(path);
+			var entry = archive.CreateEntry($"{projectVersion}/{Path.GetFileName(path)}", CompressionLevel.SmallestSize);
+			using var outputStream = entry.Open();
+			inputStream.CopyTo(outputStream);
+		}
 		Console.WriteLine(archiveName);
 	}
 }
